@@ -1,0 +1,4 @@
+﻿{
+  "sacral_geom_unreliable": ["<patient_id>"],
+  "halfline_suspects": [["<patient_id>", "t_w"]]
+}

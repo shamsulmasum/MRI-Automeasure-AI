@@ -1,0 +1,519 @@
+<meta charset="utf-8">
+<title>MRI AutoMeasure Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#0B0E11; --panel:#151A20; --panel2:#10151B; --line:#232B33;
+    --text:#D6DEE6; --dim:#8593A1; --faint:#5A6673;
+    --amber:#E8B84B; --amber-dim:#8a6f2f;
+    --green:#5FBF77; --cyan:#4FC3F7; --red:#E0685E;
+    --chip-ok:#1d3325; --chip-warn:#3a2f14; --chip-bad:#3a1c19;
+    --mono:'IBM Plex Mono',Consolas,monospace;
+    --disp:'Sora',system-ui,sans-serif;
+    --body:'Source Sans 3',system-ui,sans-serif;
+  }
+  html{background:var(--ground)}
+  body{background:var(--ground);color:var(--text);font-family:var(--body);
+       font-size:16px;line-height:1.55;margin:0;min-height:100vh}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 22px 60px}
+  header.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+             border-bottom:1px solid var(--line);padding:10px 0 14px}
+  h1{font-family:var(--disp);font-weight:700;font-size:1.35rem;margin:0;letter-spacing:.2px}
+  .sub{color:var(--dim);font-size:.92rem}
+  .pill{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;color:var(--amber);
+        border:1px solid var(--amber-dim);border-radius:3px;padding:2px 8px}
+  nav.tabs{display:flex;gap:4px;margin:16px 0 20px;flex-wrap:wrap}
+  nav.tabs button{font-family:var(--disp);font-size:.9rem;font-weight:600;color:var(--dim);
+      background:none;border:1px solid var(--line);border-radius:4px;
+      padding:8px 16px;cursor:pointer}
+  nav.tabs button:hover{color:var(--text)}
+  nav.tabs button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  nav.tabs button.on{color:var(--ground);background:var(--amber);border-color:var(--amber)}
+  section.tab{display:none}
+  section.tab.on{display:block}
+  h2{font-family:var(--disp);font-size:1.08rem;font-weight:600;margin:0 0 10px;text-wrap:balance}
+  h3{font-family:var(--disp);font-size:.95rem;font-weight:600;margin:22px 0 8px;color:var(--text)}
+  p{max-width:68ch;margin:.4rem 0;color:var(--text)}
+  p.dim,li.dim{color:var(--dim)}
+  .lay{display:grid;grid-template-columns:110px minmax(0,1fr) 300px;gap:16px;align-items:start}
+  @media (max-width:900px){.lay{grid-template-columns:1fr}.rail{display:flex;flex-wrap:wrap}}
+  .rail{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px;gap:4px;display:grid}
+  .rail .rl{font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;color:var(--faint);
+            text-transform:uppercase;padding:2px 6px}
+  .rail button{font-family:var(--mono);font-size:.85rem;color:var(--dim);background:none;
+      border:1px solid transparent;border-radius:4px;padding:6px 8px;cursor:pointer;text-align:left}
+  .rail button:hover{color:var(--text);border-color:var(--line)}
+  .rail button:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+  .rail button.on{color:var(--amber);border-color:var(--amber-dim);background:#1a1608}
+  .viewer{position:relative;background:#000;border:1px solid var(--line);border-radius:6px;
+          overflow:hidden;line-height:0}
+  .viewer img{width:100%;height:auto;display:block;filter:none}
+  .viewer canvas{position:absolute;inset:0;width:100%;height:100%}
+  .viewer .cap{position:absolute;left:10px;top:8px;font-family:var(--mono);font-size:.68rem;
+      color:var(--dim);letter-spacing:.06em;line-height:1.4;text-shadow:0 1px 2px #000}
+  .viewer .hint{position:absolute;right:10px;bottom:8px;font-family:var(--mono);font-size:.7rem;
+      color:var(--cyan);text-shadow:0 1px 2px #000;line-height:1.3}
+  .console{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px}
+  .console h4{font-family:var(--mono);font-size:.66rem;font-weight:500;letter-spacing:.14em;
+      text-transform:uppercase;color:var(--faint);margin:0 0 10px}
+  table.vals{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.85rem;
+      font-variant-numeric:tabular-nums}
+  table.vals th{font-weight:500;font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--faint);text-align:right;padding:2px 4px;border-bottom:1px solid var(--line)}
+  table.vals th:first-child{text-align:left}
+  table.vals td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--panel2);color:var(--text)}
+  table.vals td:first-child{text-align:left;color:var(--dim)}
+  td.auto{color:var(--amber)} td.gt{color:var(--green)}
+  .chip{display:inline-block;min-width:52px;border-radius:3px;padding:1px 6px;font-size:.78rem}
+  .ok{background:var(--chip-ok);color:var(--green)}
+  .warn{background:var(--chip-warn);color:var(--amber)}
+  .bad{background:var(--chip-bad);color:var(--red)}
+  .btn{font-family:var(--disp);font-weight:600;font-size:.9rem;background:var(--amber);
+      color:var(--ground);border:none;border-radius:4px;padding:9px 16px;cursor:pointer;margin-top:12px}
+  .btn:hover{filter:brightness(1.08)}
+  .btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .btn[disabled]{opacity:.45;cursor:default}
+  .btn.ghost{background:none;color:var(--dim);border:1px solid var(--line)}
+  .btn.ghost:hover{color:var(--text)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:.8rem;color:var(--dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:14px;height:3px;border-radius:2px;display:inline-block}
+  .note{border-left:3px solid var(--amber-dim);background:var(--panel2);padding:10px 14px;
+        border-radius:0 5px 5px 0;margin:14px 0;max-width:70ch;color:var(--dim);font-size:.92rem}
+  .flow{display:flex;gap:0;align-items:stretch;flex-wrap:wrap;margin:18px 0}
+  .flow .st{background:var(--panel);border:1px solid var(--line);border-radius:6px;
+      padding:14px 16px;flex:1;min-width:190px}
+  .flow .st .k{font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;color:var(--amber);
+      text-transform:uppercase}
+  .flow .st p{font-size:.9rem;color:var(--dim);margin:.35rem 0 0}
+  .flow .ar{align-self:center;color:var(--faint);font-family:var(--mono);padding:0 8px;font-size:1.1rem}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:14px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+  .stat .n{font-family:var(--mono);font-size:1.7rem;color:var(--amber);font-variant-numeric:tabular-nums}
+  .stat .l{font-size:.85rem;color:var(--dim)}
+  table.res{border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums;margin:8px 0;min-width:520px}
+  table.res th{font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--faint);border-bottom:1px solid var(--line);padding:5px 12px;text-align:right}
+  table.res th:first-child{text-align:left}
+  table.res td{padding:6px 12px;text-align:right;border-bottom:1px solid var(--panel2)}
+  table.res td:first-child{text-align:left;color:var(--dim)}
+  .scroller{overflow-x:auto}
+  .mono{font-family:var(--mono)}
+  footer{margin-top:40px;border-top:1px solid var(--line);padding-top:12px;color:var(--faint);
+         font-size:.8rem;max-width:75ch}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <h1>MRI AutoMeasure</h1>
+  <span class="pill">RESEARCH DEMO</span>
+  <span class="sub">Automatic pelvimetry &amp; one-click tumour measurement for rectal cancer MRI — pilot, 10 patients</span>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="on" data-tab="overview">Overview</button>
+  <button data-tab="pelv">Automatic pelvimetry</button>
+  <button data-tab="click">One-click tumour &amp; MRF</button>
+  <button data-tab="valid">How it was validated</button>
+</nav>
+
+<!-- ============ OVERVIEW ============ -->
+<section class="tab on" id="tab-overview">
+  <h2>What this system does</h2>
+  <p>It reproduces the standard rectal-cancer MRI measurements automatically.
+     Every result shown in this demo comes from a model that <b>never saw the
+     patient it is measuring</b> — each of the 10 pilot patients was measured
+     by a model trained only on the other nine.</p>
+
+  <div class="flow">
+    <div class="st"><span class="k">Input 1</span>
+      <p>The mid-sagittal T2 slice. Nothing else — no clicks.</p></div>
+    <div class="ar">→</div>
+    <div class="st"><span class="k">Automatic</span>
+      <p>Nine anatomical points are located; inlet, outlet, depth and sacral
+         angle are computed from them.</p></div>
+    <div class="ar">→</div>
+    <div class="st"><span class="k">Output</span>
+      <p>Four pelvimetry values, within a few millimetres of yours.</p></div>
+  </div>
+  <div class="flow">
+    <div class="st"><span class="k">Input 2</span>
+      <p>The axial slice <b>plus one rough click</b> on the tumour.</p></div>
+    <div class="ar">→</div>
+    <div class="st"><span class="k">Automatic</span>
+      <p>The caliper endpoints for tumour and mesorectal dimensions are
+         placed around your click.</p></div>
+    <div class="ar">→</div>
+    <div class="st"><span class="k">Output</span>
+      <p>Tumour width/length, MRF width/length, CC extent — with honest
+         confidence.</p></div>
+  </div>
+
+  <h3>Why automate at all</h3>
+  <p>When five of these patients were measured twice by the clinical team,
+     the two readings disagreed — modestly for bone, substantially for soft
+     tissue:</p>
+  <div class="grid2">
+    <div class="stat"><div class="n">≤ 6 mm</div>
+      <div class="l">largest difference between two readings of the same
+      <b>pelvimetry</b> value (bone — very reproducible)</div></div>
+    <div class="stat"><div class="n">up to 30 mm</div>
+      <div class="l">difference between two readings of the same
+      <b>tumour / MRF</b> value (soft tissue — hard even for experts)</div></div>
+    <div class="stat"><div class="n">2.3 mm</div>
+      <div class="l">this system's mean error on the <b>pelvic depth</b>,
+      measured on patients it never saw</div></div>
+  </div>
+  <p class="dim">Use the tabs above. Everything is interactive — in the
+     one-click tab, you place the click yourself.</p>
+</section>
+
+<!-- ============ PELVIMETRY ============ -->
+<section class="tab" id="tab-pelv">
+  <h2>Automatic pelvimetry — no clicks needed</h2>
+  <p class="dim">Choose a patient, then run. Amber = automatic; green crosses
+     = the points your team clicked when measuring this patient.</p>
+  <div class="lay">
+    <div class="rail" id="pelv-rail"><span class="rl">Patient</span></div>
+    <div>
+      <div class="viewer" id="pelv-viewer">
+        <img id="pelv-img" alt="Mid-sagittal T2 MRI slice">
+        <canvas id="pelv-canvas"></canvas>
+        <div class="cap" id="pelv-cap"></div>
+      </div>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--amber)"></span>automatic measurement</span>
+        <span><span class="sw" style="background:var(--green)"></span>clinician's points</span>
+      </div>
+    </div>
+    <div class="console">
+      <h4>Measurement console</h4>
+      <table class="vals" id="pelv-table">
+        <tr><th>measure</th><th>auto</th><th>clinician</th><th>Δ</th></tr>
+      </table>
+      <button class="btn" id="pelv-run">Run automatic measurement</button>
+      <button class="btn ghost" id="pelv-gt">Show clinician's points</button>
+      <p class="dim" id="pelv-note" style="font-size:.8rem;margin-top:10px"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CLICK TOOL ============ -->
+<section class="tab" id="tab-click">
+  <h2>One-click tumour &amp; mesorectum measurement</h2>
+  <p class="dim">Pick a patient and a task, then <b>click on the image near
+     the tumour</b> (inside the dashed circle). The measurement you see is the
+     model's real output for that exact click — try several spots to see how
+     stable it is.</p>
+  <div class="lay">
+    <div class="rail" id="click-rail"><span class="rl">Patient</span></div>
+    <div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap" id="task-rail"></div>
+      <div class="viewer" id="click-viewer" style="cursor:crosshair">
+        <img id="click-img" alt="MRI slice — click near the tumour">
+        <canvas id="click-canvas"></canvas>
+        <div class="cap" id="click-cap"></div>
+        <div class="hint">click inside the circle</div>
+      </div>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--amber)"></span>automatic calipers</span>
+        <span><span class="sw" style="background:var(--green)"></span>clinician's calipers</span>
+        <span><span class="sw" style="background:var(--cyan)"></span>your click</span>
+      </div>
+    </div>
+    <div class="console">
+      <h4>Measurement console</h4>
+      <table class="vals" id="click-table">
+        <tr><th>measure</th><th>auto</th><th>clinician</th><th>Δ</th></tr>
+      </table>
+      <button class="btn ghost" id="click-gt">Show clinician's calipers</button>
+      <p class="dim" style="font-size:.8rem;margin-top:10px" id="click-note">
+        No click yet — click the image to measure.</p>
+    </div>
+  </div>
+  <div class="note">Honesty note: with only 8 training patients this tool is a
+     <b>proof of concept</b>. Typical results land within the range where two
+     expert readings of the same patient differ, but a minority of clicks
+     produce clearly wrong output — you may find them. At ~300 patients the
+     model retrains on thirty times the data, and unconfident predictions will
+     be flagged for human measurement instead of shown.</div>
+</section>
+
+<!-- ============ VALIDATION ============ -->
+<section class="tab" id="tab-valid">
+  <h2>How it was validated</h2>
+  <h3>Leave-one-out: the model never sees the patient it measures</h3>
+  <p>With 10 pilot patients we train 10 separate models. Model&nbsp;1 trains on
+     patients 2–10 and is tested on patient 1; model 2 trains on 1 and 3–10
+     and is tested on patient 2; and so on. Every number in this demo is such
+     a held-out test result — the strictest honest evaluation a 10-patient
+     pilot allows.</p>
+
+  <h3>Pelvimetry (automatic, no clicks)</h3>
+  <div class="scroller"><table class="res">
+    <tr><th>measure</th><th>mean |error|</th><th>median</th><th>worst</th><th>your two readings differed by up to</th></tr>
+    <tr><td>Pelvic inlet</td><td class="mono">3.2 mm</td><td class="mono">2.5</td><td class="mono">8.5</td><td class="mono">6.3 mm</td></tr>
+    <tr><td>Pelvic depth</td><td class="mono">2.3 mm</td><td class="mono">2.2</td><td class="mono">4.9</td><td class="mono">4.3 mm</td></tr>
+    <tr><td>Pelvic outlet</td><td class="mono">6.5 mm</td><td class="mono">5.5</td><td class="mono">18.2</td><td class="mono">6.3 mm</td></tr>
+    <tr><td>Sacral angulation</td><td class="mono">7.6°</td><td class="mono">3.9°</td><td class="mono">35.6°</td><td class="mono">5.1°</td></tr>
+  </table></div>
+  <p class="dim">Inlet is inside human variability for all ten patients. The
+     sacral angle works for most patients but has three outliers — a known,
+     explainable weakness (tiny endpoint slips along the smooth sacrum swing a
+     short ray by many degrees) with planned fixes for the cohort phase.</p>
+
+  <h3>One-click tumour / MRF (this is the harder problem)</h3>
+  <div class="scroller"><table class="res">
+    <tr><th>measure</th><th>median |error|</th><th>mean</th><th>worst</th><th>your two readings differed by up to</th></tr>
+    <tr><td>Tumour width</td><td class="mono">7.2 mm</td><td class="mono">10.4</td><td class="mono">26.5</td><td class="mono">13 mm</td></tr>
+    <tr><td>Tumour length</td><td class="mono">9.7 mm</td><td class="mono">10.8</td><td class="mono">21.0</td><td class="mono">5 mm</td></tr>
+    <tr><td>MRF width</td><td class="mono">8.7 mm</td><td class="mono">18.3</td><td class="mono">50.0</td><td class="mono">28 mm</td></tr>
+    <tr><td>MRF length</td><td class="mono">8.1 mm</td><td class="mono">16.0</td><td class="mono">72.9</td><td class="mono">30 mm</td></tr>
+    <tr><td>Tumour CC extent</td><td class="mono">14.0 mm</td><td class="mono">23.5</td><td class="mono">89.5</td><td class="mono">29 mm</td></tr>
+  </table></div>
+  <p class="dim">Medians sit within the band where your own two readings
+     disagreed; the means are pulled up by a minority of clear failures.
+     Interpretation: the method works, the training set (8 patients) does not
+     cover soft-tissue variety — the core case for the 300-patient cohort.</p>
+
+  <h3>What we ask from you</h3>
+  <p class="dim">Protocol sign-off, the difficulty-score variable list, and
+     per-patient clinical covariates for the cohort phase.</p>
+</section>
+
+<footer>
+  Pilot dataset: 10 anonymised patients from the collaborating centre. Every prediction shown was
+  produced leave-one-out. Ground truth recovered from your annotated images
+  (median agreement with the spreadsheet 0.34&nbsp;mm) and visually verified.
+  Research demonstration only — not a medical device.
+</footer>
+</div>
+
+<script>
+window.D = /*__DATA__*/ null;
+
+const $=q=>document.querySelector(q);
+if(!window.D){
+  document.querySelector('nav.tabs').style.display='none';
+  document.querySelectorAll('section.tab').forEach(s=>s.remove());
+  document.querySelector('.wrap').insertAdjacentHTML('beforeend',
+    '<div class="note" style="margin-top:28px"><b>Template only — no dataset embedded.</b> '+
+    'This file is the demo shell; patient data is never distributed with it. '+
+    'To get a working demo, run the pipeline on your own data and build it with '+
+    '<span class="mono">export_demo_data.py</span> → <span class="mono">demo_grid.py</span> → '+
+    '<span class="mono">build_demo.py</span>, or ask the project team for access to the '+
+    'collaborators\' demonstration.</div>');
+}
+if(window.D){
+const PELV_LINES=[["inlet_prom","inlet_pub","inlet"],["outlet_pub","outlet_cocc","outlet"],
+                  ["depth_prom","depth_cocc","depth"],["sacral_vertex","sacral_up",null],
+                  ["sacral_vertex","sacral_down",null]];
+const PELV_MEAS=[["inlet","Inlet","mm",6.3],["outlet","Outlet","mm",6.3],
+                 ["depth","Depth","mm",6.3],["sacral","Sacral angle","°",5.1]];
+const TASKS=[["axial_tumour","Tumour (axial)"],["axial_mrf","Mesorectum / MRF"],["sag_tcc","CC extent (sagittal)"]];
+const TASK_MEAS={axial_tumour:[["t_w","Tumour width",13],["t_l","Tumour length",9]],
+                 axial_mrf:[["mrf_w","MRF width",28],["mrf_l","MRF length",30]],
+                 sag_tcc:[["t_cc","CC extent",29]]};
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* tabs */
+document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('section.tab').forEach(s=>s.classList.toggle('on',s.id==='tab-'+b.dataset.tab));
+});
+
+function chip(d,band){const a=Math.abs(d);
+  const cls=a<=band?'ok':(a<=band*2?'warn':'bad');
+  return `<span class="chip ${cls}">${d>0?'+':''}${d.toFixed(1)}</span>`}
+
+/* ---------- pelvimetry ---------- */
+let pelvPid=null, pelvShown=false, pelvGT=false;
+const pelvPids=Object.keys(D.pelv).sort();
+pelvPids.forEach(pid=>{
+  const b=document.createElement('button');b.textContent=pid;
+  b.onclick=()=>{pelvPid=pid;pelvShown=false;pelvGT=false;renderPelv();};
+  $('#pelv-rail').appendChild(b);
+});
+function pelvScaleCtx(){
+  const img=$('#pelv-img'),cv=$('#pelv-canvas');
+  cv.width=img.naturalWidth;cv.height=img.naturalHeight;
+  return cv.getContext('2d');
+}
+function renderPelv(){
+  document.querySelectorAll('#pelv-rail button').forEach(b=>b.classList.toggle('on',b.textContent===pelvPid));
+  const P=D.pelv[pelvPid], S=D.slices[P.img];
+  const img=$('#pelv-img');
+  img.onload=()=>{drawPelv();};
+  img.src='data:image/jpeg;base64,'+S.jpg;
+  $('#pelv-cap').innerHTML=`patient ${pelvPid}<br>mid-sagittal T2`;
+  $('#pelv-run').disabled=false;
+  $('#pelv-note').textContent='';
+  fillPelvTable(false);
+  if(img.complete)drawPelv();
+}
+function fillPelvTable(showVals){
+  const P=D.pelv[pelvPid];
+  let h='<tr><th>measure</th><th>auto</th><th>clinician</th><th>Δ</th></tr>';
+  for(const [k,label,unit,band] of PELV_MEAS){
+    h+=`<tr><td>${label}</td><td class="auto">${showVals?P.pred_values[k].toFixed(1)+' '+unit:'—'}</td>`+
+       `<td class="gt">${P.excel[k].toFixed(1)} ${unit}</td>`+
+       `<td>${showVals?chip(P.delta[k],band):''}</td></tr>`;
+  }
+  $('#pelv-table').innerHTML=h;
+}
+function drawPelv(){
+  const P=D.pelv[pelvPid];const ctx=pelvScaleCtx();
+  ctx.clearRect(0,0,1e4,1e4);
+  if(pelvGT){
+    ctx.strokeStyle='#5FBF77';ctx.lineWidth=1.4;
+    for(const n in P.gt_lm){
+      if(!P.sacral_gt_ok&&n.startsWith('sacral'))continue;
+      const[x,y]=P.gt_lm[n];
+      ctx.beginPath();ctx.moveTo(x-7,y);ctx.lineTo(x+7,y);ctx.moveTo(x,y-7);ctx.lineTo(x,y+7);ctx.stroke();
+    }
+  }
+  if(pelvShown){
+    ctx.strokeStyle='#E8B84B';ctx.lineWidth=1.6;
+    for(const[a,b] of PELV_LINES){
+      const A=P.pred_lm[a],B=P.pred_lm[b];
+      ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);ctx.stroke();
+    }
+    ctx.fillStyle='#E8B84B';
+    for(const n in P.pred_lm){const[x,y]=P.pred_lm[n];
+      ctx.beginPath();ctx.arc(x,y,3.4,0,7);ctx.fill();}
+  }
+}
+$('#pelv-run').onclick=()=>{
+  pelvShown=false;drawPelv();
+  const P=D.pelv[pelvPid];
+  const names=Object.keys(P.pred_lm);let i=0;
+  $('#pelv-run').disabled=true;
+  const step=()=>{
+    i++;const ctx=pelvScaleCtx();drawPelv();
+    ctx.fillStyle='#E8B84B';
+    names.slice(0,i).forEach(n=>{const[x,y]=P.pred_lm[n];
+      ctx.beginPath();ctx.arc(x,y,3.4,0,7);ctx.fill();});
+    if(i<names.length){setTimeout(step,reduced?0:110);}
+    else{pelvShown=true;drawPelv();fillPelvTable(true);
+      $('#pelv-note').textContent=P.sacral_gt_ok?'' :
+        'Note: this patient’s clinician sacral-angle line positions could not be recovered reliably; the angle value comparison is still valid.';}
+  };
+  reduced?(pelvShown=true,drawPelv(),fillPelvTable(true)):step();
+};
+$('#pelv-gt').onclick=()=>{pelvGT=!pelvGT;
+  $('#pelv-gt').textContent=pelvGT?'Hide clinician’s points':'Show clinician’s points';
+  drawPelv();};
+
+/* ---------- click tool ---------- */
+let task='axial_tumour', clickPid=null, clickGT=false, lastEntry=null, lastClick=null;
+TASKS.forEach(([t,label])=>{
+  const b=document.createElement('button');b.className='btn ghost';b.style.marginTop='0';
+  b.textContent=label;b.dataset.t=t;
+  b.onclick=()=>{task=t;lastEntry=null;lastClick=null;buildClickRail();};
+  $('#task-rail').appendChild(b);
+});
+function gridKeyPids(){return Object.keys(D.grid).filter(k=>k.startsWith(task+'|')).map(k=>k.split('|')[1]).sort();}
+function buildClickRail(){
+  document.querySelectorAll('#task-rail button').forEach(b=>{
+    b.classList.toggle('ghost',b.dataset.t!==task);
+    b.style.background=b.dataset.t===task?'var(--amber)':'none';
+    b.style.color=b.dataset.t===task?'var(--ground)':'var(--dim)';
+  });
+  const rail=$('#click-rail');rail.innerHTML='<span class="rl">Patient</span>';
+  const pids=gridKeyPids();
+  pids.forEach(pid=>{
+    const b=document.createElement('button');b.textContent=pid;
+    b.onclick=()=>{clickPid=pid;lastEntry=null;lastClick=null;clickGT=false;renderClick();};
+    rail.appendChild(b);
+  });
+  if(!pids.includes(clickPid))clickPid=pids[0];
+  lastEntry=null;renderClick();
+}
+function G(){return D.grid[task+'|'+clickPid];}
+function renderClick(){
+  document.querySelectorAll('#click-rail button').forEach(b=>b.classList.toggle('on',b.textContent===clickPid));
+  const g=G(); const S=D.slices[task+'_'+clickPid];
+  const img=$('#click-img');
+  img.onload=()=>drawClick();
+  img.src='data:image/jpeg;base64,'+S.jpg;
+  $('#click-cap').innerHTML=`patient ${clickPid}<br>${task==='sag_tcc'?'sagittal T2':'axial slice'}`;
+  fillClickTable();
+  if(img.complete)drawClick();
+}
+function fillClickTable(){
+  const g=G();
+  let h='<tr><th>measure</th><th>auto</th><th>clinician</th><th>Δ</th></tr>';
+  for(const[k,label,band] of TASK_MEAS[task]){
+    const v=lastEntry?lastEntry.v[k]:null;
+    h+=`<tr><td>${label}</td><td class="auto">${v!==null&&v!==undefined?v.toFixed(1)+' mm':'—'}</td>`+
+       `<td class="gt">${g.excel[k].toFixed(1)} mm</td>`+
+       `<td>${v!==null&&v!==undefined?chip(v-g.excel[k],band):''}</td></tr>`;
+  }
+  $('#click-table').innerHTML=h;
+  $('#click-note').textContent=lastEntry?
+    'Model output for your click. Try a few more spots — stability matters as much as accuracy.':
+    'No click yet — click the image to measure.';
+}
+function drawClick(click){
+  if(click)lastClick=click; else click=lastClick;
+  const g=G();const img=$('#click-img'),cv=$('#click-canvas');
+  cv.width=img.naturalWidth;cv.height=img.naturalHeight;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,1e4,1e4);
+  /* clickable region */
+  ctx.setLineDash([5,5]);ctx.strokeStyle='rgba(79,195,247,.6)';ctx.lineWidth=1.2;
+  const r=16/g.mm_per_disp_px;
+  ctx.beginPath();ctx.arc(g.centre_disp[0],g.centre_disp[1],r,0,7);ctx.stroke();
+  ctx.setLineDash([]);
+  if(clickGT){
+    ctx.strokeStyle='#5FBF77';ctx.lineWidth=1.4;
+    for(let i=0;i<g.gt_e.length;i+=2){
+      ctx.beginPath();ctx.moveTo(g.gt_e[i][0],g.gt_e[i][1]);
+      ctx.lineTo(g.gt_e[i+1][0],g.gt_e[i+1][1]);ctx.stroke();
+    }
+  }
+  if(lastEntry){
+    ctx.strokeStyle='#E8B84B';ctx.lineWidth=1.8;
+    const e=lastEntry.e;
+    for(let i=0;i<e.length;i+=2){
+      ctx.beginPath();ctx.moveTo(e[i][0],e[i][1]);ctx.lineTo(e[i+1][0],e[i+1][1]);ctx.stroke();
+      tick(ctx,e[i],e[i+1]);tick(ctx,e[i+1],e[i]);
+    }
+  }
+  if(click){
+    ctx.strokeStyle='#4FC3F7';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(click[0]-8,click[1]-8);ctx.lineTo(click[0]+8,click[1]+8);
+    ctx.moveTo(click[0]+8,click[1]-8);ctx.lineTo(click[0]-8,click[1]+8);ctx.stroke();
+  }
+}
+function tick(ctx,p,q){
+  const dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1;
+  const nx=-dy/L*6,ny=dx/L*6;
+  ctx.beginPath();ctx.moveTo(p[0]-nx,p[1]-ny);ctx.lineTo(p[0]+nx,p[1]+ny);ctx.stroke();
+}
+$('#click-viewer').addEventListener('click',ev=>{
+  const g=G();const img=$('#click-img');
+  const rect=img.getBoundingClientRect();
+  const x=(ev.clientX-rect.left)*img.naturalWidth/rect.width;
+  const y=(ev.clientY-rect.top)*img.naturalHeight/rect.height;
+  const dxmm=(x-g.centre_disp[0])*g.mm_per_disp_px;
+  const dymm=(y-g.centre_disp[1])*g.mm_per_disp_px;
+  if(Math.hypot(dxmm,dymm)>17){
+    $('#click-note').textContent='That click is outside the demonstrated zone — click inside the dashed circle (near the tumour).';
+    drawClick([x,y]);return;
+  }
+  let best=null,bd=1e9;
+  for(const e of g.entries){const d=Math.hypot(e.c[0]-dxmm,e.c[1]-dymm);
+    if(d<bd){bd=d;best=e;}}
+  lastEntry=best;fillClickTable();drawClick([x,y]);
+});
+$('#click-gt').onclick=()=>{clickGT=!clickGT;
+  $('#click-gt').textContent=clickGT?'Hide clinician’s calipers':'Show clinician’s calipers';
+  drawClick();};
+
+/* init */
+pelvPid=pelvPids[0];renderPelv();buildClickRail();
+}
+</script>

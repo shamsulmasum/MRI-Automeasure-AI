@@ -1,0 +1,5 @@
+﻿numpy
+opencv-python-headless
+pydicom
+torch
+faster-whisper

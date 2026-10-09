@@ -1,0 +1,7 @@
+﻿{
+  "<patient_id>": {"inlet": 108, "outlet": 78, "depth": 124, "sacral": 106.8,
+                   "t_w": 36, "t_l": 39, "mrf_w": 70, "mrf_l": 63,
+                   "t_cc": 40, "junction": 43},
+  "P002": {"inlet": 102, "outlet": 83, "depth": 111, "sacral": 94.7,
+           "t_w": 43, "t_l": 35, "mrf_w": 65, "mrf_l": 42, "t_cc": 40}
+}
