@@ -12,6 +12,27 @@ readings disagreed by up to 6 mm for bone and up to **30 mm for soft tissue**.
 This project automates the measurements, so they become fast, consistent and
 usable at cohort scale.
 
+## What the demo shows
+
+Screenshots from the interactive research demo (shared privately with the
+clinical collaborators — see *Data availability*). Patient identifiers are
+blurred.
+
+![Demo overview: inputs, automatic steps and outputs, with human re-reading variability](docs/images/demo_overview.png)
+
+*Overview tab — what the system takes in, what it does, and why: two readings
+of the same value by the clinical team disagreed by up to 6 mm for bone and
+up to 30 mm for soft tissue, against a 2.3 mm mean error for the automatic
+pelvic depth on patients the model never saw.*
+
+![Automatic pelvimetry on a held-out patient: amber = automatic landmarks, green crosses = clinician's points, with the measurement console](docs/images/demo_pelvimetry.png)
+
+*Automatic pelvimetry tab — a held-out patient measured from the mid-sagittal
+T2 slice with no clicks. Amber points and lines are the automatic
+measurement; green crosses are the points the clinical team clicked. The
+console compares automatic and clinician values for inlet, outlet, depth and
+sacral angle (here within 0.7–2.7 mm / °).*
+
 ## Findings from the 10-patient pilot
 
 Everything below is evaluated **leave-one-out**: every patient was measured
@@ -88,8 +109,10 @@ wrong structure entirely).
 
 ## Data availability
 
-**This repository contains no patient data.** No images, no DICOM, no
-per-patient measurements, no patient identifiers — the pilot imaging was
+**This repository contains no patient data.** No DICOM, no per-patient
+measurements, no patient identifiers — the only imaging is the two
+anonymised demo screenshots above (identifiers removed, shared under the
+study's data-sharing agreement). The pilot imaging was
 provided by the collaborating clinical centres for research and is not ours
 to redistribute. The code expects your own data in the layout described in
 `example_data/` (clinician values, optional QC overrides) with DICOM and
